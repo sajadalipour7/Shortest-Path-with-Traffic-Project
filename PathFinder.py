@@ -1,28 +1,37 @@
 import math
+import matplotlib.pyplot as plt
 
 
 class Node:
+    """
+    This is a class for vertex and it's details
+    """
+
     def __init__(self, id, latitude, longitude):
         self.id = id
         self.latitude = latitude
         self.longitude = longitude
         self.adjacency_list = {}
-        self.length_list={}
+        self.length_list = {}
         self.prev = None
         self.dist = math.inf
         self.is_explored = False
 
     def add_neighbour(self, neighbour, length, traffic):
         self.adjacency_list[neighbour] = length * (1 + 0.3 * traffic)
-        self.length_list[neighbour]=length
+        self.length_list[neighbour] = length
 
     def get_neighbours(self):
         return self.adjacency_list
 
 
 class MinHeap:
+    """
+    This is a min heap to store distances in it .
+    """
+
     def __init__(self):
-        self.heap = [0] * 1000
+        self.heap = [0] * 1000000
         self.size = 0
         self.index_hash_table = {}
 
@@ -98,6 +107,9 @@ class MinHeap:
 
 
 def all_visited(arr):
+    """
+    This is a function to check if all vertices are explored
+    """
     for dummy, node in arr.items():
         if node.is_explored == False:
             return False
@@ -105,15 +117,15 @@ def all_visited(arr):
 
 
 def dijkstra(vertices, start):
+    """
+    This is a function to perform Dijkstra algorithm on a graph
+    """
     heap = MinHeap()
     for dummy, node in vertices.items():
         heap.insert(node)
     start.dist = 0
-    # heap.show_details()
     heap.remove(heap.index_hash_table[start])
-    # heap.show_details()
     heap.insert(start)
-    # heap.show_details()
     while not all_visited(vertices):
         current_vertex = heap.extract_min()
         current_vertex.is_explored = True
@@ -129,11 +141,13 @@ def dijkstra(vertices, start):
 
 
 # Start
+# Getting Inputs
 vertices = {}
 file_input = open("Maps/1/m1.txt", "r")
 first_line = list(map(int, (file_input.readline()).split()))
 number_of_vertices = first_line[0]
 number_of_edges = first_line[1]
+edges = []
 for i in range(number_of_vertices):
     str_line = list(map(float, (file_input.readline()).split()))
     id = int(str_line[0])
@@ -144,73 +158,102 @@ for i in range(number_of_edges):
     str_line = list(map(int, (file_input.readline()).split()))
     first_vertex = vertices[str_line[0]]
     second_vertex = vertices[str_line[1]]
+    edges.append((first_vertex, second_vertex))
     length = math.sqrt(
         (first_vertex.latitude - second_vertex.latitude) ** 2 + (first_vertex.longitude - second_vertex.longitude) ** 2)
     first_vertex.add_neighbour(second_vertex, length, 0)
     second_vertex.add_neighbour(first_vertex, length, 0)
 
-def calculate_and_perform_traffic_from_point_a_and_b(vertices,start,destination,time):
-    time_ans=0
-    path=[]
-    current=vertices[destination]
-    while current.id!=start:
+
+def calculate_and_perform_traffic_from_point_a_and_b(vertices, start, destination, time):
+    """
+    This is a function to calculate the time and perform traffic
+    """
+    time_ans = 0
+    path = []
+    current = vertices[destination]
+    while current.id != start:
         path.append(current.id)
-        time_ans+=current.adjacency_list[current.prev]
-        current.adjacency_list[current.prev]+=current.length_list[current.prev]*0.3*1
-        current.prev.adjacency_list[current]+=current.prev.length_list[current]*0.3*1
-        current=current.prev
+        time_ans += current.adjacency_list[current.prev]
+        current.adjacency_list[current.prev] += current.length_list[current.prev] * 0.3 * 1
+        current.prev.adjacency_list[current] += current.prev.length_list[current] * 0.3 * 1
+        current = current.prev
     path.append(current.id)
     path.reverse()
-    return (time+time_ans*120,path)
+    return (time + time_ans * 120, path)
+
+
 def reset_vertices(vertices):
-    for id,vertex in vertices.items():
-        vertices[id].dist=math.inf
+    """
+    This is a function to reset vertices to get them ready for dijkstra algorithm
+    """
+    for id, vertex in vertices.items():
+        vertices[id].dist = math.inf
         vertices[id].is_explored = False
         vertices[id].prev = None
-def check_if_traffic_will_be_finish_in_any_path(vertices,paths,req_time):
+
+
+def check_if_traffic_will_be_finish_in_any_path(vertices, paths, req_time):
+    """
+    This is a function to check if traffic will be finish for the paths
+    """
     for path in paths:
-        time_path=path[0]
-        the_path=path[1]
-        if req_time-time_path>=0:
-            for i in range(0,len(the_path)-1):
-                first=vertices[the_path[i]]
-                second=vertices[the_path[i+1]]
-                if first.adjacency_list[second]>first.length_list[second]:
-                    first.adjacency_list[second]-=first.length_list[second]*0.3*1
-                    second.adjacency_list[first]-=second.length_list[first]*0.3*1
+        time_path = path[0]
+        the_path = path[1]
+        if req_time - time_path >= 0:
+            for i in range(0, len(the_path) - 1):
+                first = vertices[the_path[i]]
+                second = vertices[the_path[i + 1]]
+                if first.adjacency_list[second] > first.length_list[second]:
+                    first.adjacency_list[second] -= first.length_list[second] * 0.3 * 1
+                    second.adjacency_list[first] -= second.length_list[first] * 0.3 * 1
 
 
+def show_path(vertices, edges, path, t):
+    """
+    This is a function to show the results graphically with matplotlib library
+    """
+    for i, j in edges:
+        x = [i.longitude, j.longitude]
+        y = [i.latitude, j.latitude]
+        names = [i.id, j.id]
+        plt.plot(x, y, '-o', color='r')
+        for ii, txt in enumerate(names):
+            plt.annotate(txt, (x[ii], y[ii]))
 
-paths=[]
-dummy_first_time=True
+    for i in range(len(path) - 1):
+        v1 = vertices[path[i]]
+        v2 = vertices[path[i + 1]]
+        x = [v1.longitude, v2.longitude]
+        y = [v1.latitude, v2.latitude]
+        plt.plot(x, y, '-o', color='b')
+    plt.title(t)
+    plt.show()
+
+# Getting sources and destinations
+paths = []
+dummy_first_time = True
 while True:
     command = input()
-    commands = list(map(int, command.split()))
+    commands = list(map(float, command.split()))
     req_time = commands[0]
-    start = commands[1]
-    destination = commands[2]
+    start = int(commands[1])
+    destination = int(commands[2])
     if dummy_first_time:
-        dummy_first_time=False
-        dijkstra(vertices,vertices[start])
-        details=calculate_and_perform_traffic_from_point_a_and_b(vertices,start,destination,req_time)
+        dummy_first_time = False
+        dijkstra(vertices, vertices[start])
+        details = calculate_and_perform_traffic_from_point_a_and_b(vertices, start, destination, req_time)
         paths.append(details)
-        print(details[0]-req_time)
+        print("The best path is : ", details[1])
+        print("Estimated time to arrive : ", details[0] - req_time, " minutes")
+        show_path(vertices, edges, details[1], str(details[0] - req_time) + " minutes")
         reset_vertices(vertices)
     else:
-        check_if_traffic_will_be_finish_in_any_path(vertices,paths,req_time)
-        dijkstra(vertices,vertices[start])
-        details=calculate_and_perform_traffic_from_point_a_and_b(vertices,start,destination,req_time)
+        check_if_traffic_will_be_finish_in_any_path(vertices, paths, req_time)
+        dijkstra(vertices, vertices[start])
+        details = calculate_and_perform_traffic_from_point_a_and_b(vertices, start, destination, req_time)
         paths.append(details)
-        print(details[0]-req_time)
+        print("The best path is : ", details[1])
+        print("Estimated time to arrive : ", details[0] - req_time, " minutes")
+        show_path(vertices, edges, details[1], str(details[0] - req_time) + " minutes")
         reset_vertices(vertices)
-        pass
-
-# heap=MinHeap()
-# heap.insert(50)
-# heap.insert(10)
-# heap.insert(7)
-# heap.insert(3)
-# heap.insert(4)
-# heap.insert(49)
-# heap.insert(20)
-# print(heap.heap)
